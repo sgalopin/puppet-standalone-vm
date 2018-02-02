@@ -12,9 +12,10 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
+  #config.vm.box = "bento/ubuntu-16.04"
   #config.vm.box = "debian/contrib-stretch64" # Box with Virtualbox Guest Additions
-  config.vm.box = "bento/ubuntu-16.04"
-
+  config.vm.box = "debian/stretch64"
+  
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -88,9 +89,9 @@ Vagrant.configure("2") do |config|
 	# Puppet package
 	# https://puppet.com/docs/puppet/5.3/puppet_platform.html
 	# Debian 9 Stretch
-	# wget -r -O /var/tmp/puppet.deb https://apt.puppetlabs.com/puppet5-release-stretch.deb
+	wget -r -O /var/tmp/puppet.deb https://apt.puppetlabs.com/puppet5-release-stretch.deb
 	# Ubuntu 16.04 Xenial Xerus
-	wget -r -O /var/tmp/puppet.deb https://apt.puppetlabs.com/puppet5-release-xenial.deb
+	# wget -r -O /var/tmp/puppet.deb https://apt.puppetlabs.com/puppet5-release-xenial.deb
 	sudo dpkg -i /var/tmp/puppet.deb
 	
     # Apt update and upgrade
@@ -98,21 +99,28 @@ Vagrant.configure("2") do |config|
     sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
 
     # Puppet and git install
-	export PATH=/opt/puppetlabs/bin:$PATH
 	sudo apt-get install -y puppet-agent git-core
+	# export PATH=/opt/puppetlabs/bin:$PATH
 	
+  SHELL
+
+  # Provision "update"
+  config.vm.provision "update", type: "shell", privileged: false, inline: <<-SHELL
+
     # Puppet module install
+	rm -rdf /var/tmp/puppet-rtm
 	git clone https://github.com/sgalopin/puppet-rtm /var/tmp/puppet-rtm
 	puppet module build /var/tmp/puppet-rtm 
-	sudo puppet module install /var/tmp/puppet-rtm/pkg/puppet-rtm-0.1.0.tar.gz 
+	sudo -i puppet module list | grep rtm
+	if [ $? = 0 ]; then sudo -i puppet module uninstall --ignore-changes puppet-rtm; fi
+	sudo -i puppet module install /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz 
 	
 	# Puppet apply
-	sudo puppet apply -e "include rtm"
+	sudo -i puppet apply -e "class {'rtm': domain => 'example.com' }"
 	
 	# Puppet tasks
 	sudo /bin/bash /root/tmp/rtm/scripts/build_ogamserver.sh
 	sudo /bin/bash /root/tmp/rtm/scripts/build_ogamservices.sh
-
   SHELL
 
 end
