@@ -105,6 +105,7 @@ Vagrant.configure("2") do |config|
   SHELL
 
   # Provision "update"
+  config.vm.provision "file", source: "./init.pp", destination: "/etc/puppetlabs/code/environments/production/manifests/init.pp"
   config.vm.provision "update", type: "shell", privileged: false, inline: <<-SHELL
 
     # Puppet module install
@@ -113,11 +114,12 @@ Vagrant.configure("2") do |config|
 	puppet module build /var/tmp/puppet-rtm 
 	sudo -i puppet module list | grep rtm
 	if [ $? = 0 ]; then sudo -i puppet module uninstall --ignore-changes puppet-rtm; fi
-	sudo -i puppet module install /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz 
-	
+	sudo -i puppet module install --ignore-dependencies /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz 
+
 	# Puppet apply
-	sudo -i puppet apply -e "class {'rtm': domain => 'example.com' }"
-	
+	# sudo -i puppet apply -e "class {'rtm': domain => 'example.com', ... }"
+	sudo -i puppet apply /etc/puppetlabs/code/environments/production/manifests/init.pp
+
 	# Puppet tasks
 	sudo /bin/bash /root/tmp/rtm/scripts/build_ogamserver.sh
 	sudo /bin/bash /root/tmp/rtm/scripts/build_ogamservices.sh
