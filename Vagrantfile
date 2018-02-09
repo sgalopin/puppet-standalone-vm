@@ -104,8 +104,13 @@ Vagrant.configure("2") do |config|
 	
   SHELL
 
+  # Provisions for the "init.pp" file
+  config.vm.provision "file", source: "./init.pp", destination: "/var/tmp/init.pp"
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    sudo mv /var/tmp/init.pp /etc/puppetlabs/code/environments/production/manifests/init.pp
+  SHELL
+  
   # Provision "update"
-  config.vm.provision "file", source: "./init.pp", destination: "/etc/puppetlabs/code/environments/production/manifests/init.pp"
   config.vm.provision "update", type: "shell", privileged: false, inline: <<-SHELL
 
     # Puppet module install
@@ -113,8 +118,12 @@ Vagrant.configure("2") do |config|
 	git clone https://github.com/sgalopin/puppet-rtm /var/tmp/puppet-rtm
 	puppet module build /var/tmp/puppet-rtm 
 	sudo -i puppet module list | grep rtm
-	if [ $? = 0 ]; then sudo -i puppet module uninstall --ignore-changes puppet-rtm; fi
-	sudo -i puppet module install --ignore-dependencies /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz 
+	if [ $? = 0 ]; then
+	  sudo -i puppet module uninstall --ignore-changes puppet-rtm;
+	  sudo -i puppet module install --ignore-dependencies /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz
+	else
+	  sudo -i puppet module install /var/tmp/puppet-rtm/pkg/puppet-rtm-1.0.0.tar.gz
+	fi
 
 	# Puppet apply
 	# sudo -i puppet apply -e "class {'rtm': domain => 'example.com', ... }"
